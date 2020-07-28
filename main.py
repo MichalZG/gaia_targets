@@ -1,7 +1,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_table
 import pandas as pd
 import numpy as np
@@ -15,6 +15,7 @@ import plotly.graph_objs as go
 import plotly.express as px
 import re
 import dash_bootstrap_components as dbc
+from dash.exceptions import PreventUpdate
 
 # pd.options.display.float_format = '{:.2f}'.format
 
@@ -94,7 +95,7 @@ style_data_conditional = [
 
 
 
-controls = dbc.Form(
+controls = dbc.FormGroup(
     [
         dbc.FormGroup(
             [
@@ -127,13 +128,23 @@ controls = dbc.Form(
     # body=True,
 )
 
+row1 = html.Tr([html.Td("Sunset [UT]:"), html.Td(id="sunset", children="")])
+row2 = html.Tr([html.Td("Sunrise [UT]:"), html.Td(id="sunrise", children="")])
+row3 = html.Tr([html.Td("Moon phase [%]:"), html.Td(id="moon_phase", children="")])
+row4 = html.Tr([html.Td("Moon Alt/Az [deg]:"), html.Td(id="moon_altaz", children="")])
+row5 = html.Tr([html.Td("LST:"), html.Td(id="LST", children="")])
+
+table_body = [html.Tbody([row1, row2, row3, row4, row5])]
+
+table = dbc.Table(table_body, bordered=False)
 
 app.layout = dbc.Container(
     [
         dbc.Row(
             [
-                dbc.Col(controls, width={'size': 2, 'offset': 3}),
-                dbc.Col(dcc.Graph(id='graph'), width={'size': 4}),
+                dbc.Col(controls, width={'size': 2, 'offset': 2}),
+                dbc.Col(dcc.Graph(id='graph'), width={'size': 3}),
+                dbc.Col(table, width={'size': 3, 'offset': 0}),
             ],
             align='center',
         ),
@@ -197,6 +208,8 @@ def clean_data(longitude, latitude, date, ut):
     [Input('table', 'derived_virtual_data')],
 )
 def set_graph(data):
+    if not data:
+        raise PreventUpdate
     data = pd.DataFrame(data)
     fig = px.scatter_polar(data, r="Alt UT", theta="Az0", range_r=[90, 0], hover_name='Name')
 
@@ -209,6 +222,34 @@ def set_graph(data):
 def set_table_data(data):
     data = pd.read_json(data, orient='split')
     return data.to_dict(orient='records')
+
+
+@app.callback(
+    [Output('sunset', 'children'),
+     Output('sunrise', 'children'),
+     Output('moon_phase', 'children'),
+     Output('moon_altaz', 'children'),
+     Output('LST', 'children')],
+    [Input('longitude', 'value'),
+     Input('latitude', 'value'),
+     Input('date-picker', 'value'),
+     Input('ut', 'value')]
+    )
+def set_info(longitude, latitude, date, ut):
+    observer = get_observer(longitude, latitude)
+    date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
+    date = date.replace(hour=int(ut))
+    date = Time(date)
+
+    sunset = observer.sun_set_time(date).strftime('%d-%m-%Y %H:%M:%S')
+    sunrise = observer.sun_rise_time(date).strftime('%d-%m-%Y %H:%M:%S')
+    moon_phase = observer.moon_phase(date)
+    moon_altaz = observer.moon_altaz(date)
+    moon_alt = str(round(moon_altaz.alt.deg, 0))
+    moon_az = str(round(moon_altaz.az.deg, 0))
+    lst = observer.local_sidereal_time(date)
+
+    return sunset, sunrise, int(moon_phase.value / np.pi * 100), ", ".join([moon_alt, moon_az]), str(lst)
 
 
 def get_observer(longitude, latitude):
@@ -227,4 +268,4 @@ def get_alt(observer, date, offset, ra, dec):
     
 
 if __name__ == '__main__':
-    app.run_server(host="0.0.0.0", port=8050, debug=False)
+    app.run_server(host="0.0.0.0", port=8050, debug=True)
