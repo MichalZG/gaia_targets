@@ -27,9 +27,16 @@ columns.extend(additional_columns)
 
 columns = [{"name": i, "id": i} for i in columns]
 
+
+
 for c in columns:
     if 'Alt UT' in c['name']:
         c['format'] = {'specifier': '.1f'} 
+        c['type'] = 'numeric'
+    elif c['name'] in ['RA', 'Dec']:
+        c['format'] = {'specifier': '.5f'} 
+        c['type'] = 'numeric'
+
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__)
@@ -185,8 +192,6 @@ def clean_data(longitude, latitude, date, ut):
         altaz_df['Alt'+str(i)] = np.array(alt_tab)
         altaz_df['Az'+str(i)] = np.array(az_tab)
 
-    full_df['RA'] = full_df['RA'].map("{:,.5f}".format)
-    full_df['Dec'] = full_df['Dec'].map("{:,.5f}".format)
     return full_df.to_json(date_format='iso', orient='split'), altaz_df.to_json(orient='split')
 
 
@@ -225,4 +230,4 @@ def get_alt(observer, date, offset, ra, dec):
     
 
 if __name__ == '__main__':
-    app.run_server(host="0.0.0.0", port=8050, debug=False)
+    app.run_server(host="0.0.0.0", port=8050, debug=True)
