@@ -16,8 +16,9 @@ import plotly.express as px
 import re
 import dash_bootstrap_components as dbc
 
-df = pd.read_csv('./gaia_targets_test.csv')
+# pd.options.display.float_format = '{:.2f}'.format
 
+df = pd.read_csv('./gaia_targets_test.csv')
 additional_columns = ['Alt UT', 'Alt UT+3', 'Alt UT+6']
 offsets = [0, 3, 6]
 
@@ -26,79 +27,178 @@ columns.extend(additional_columns)
 
 columns = [{"name": i, "id": i} for i in columns]
 
+for c in columns:
+    if 'Alt UT' in c['name']:
+        c['format'] = {'specifier': '.1f'} 
+
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__)
 
+style_data_conditional = [
+    {
+        'if': {
+            'filter_query': '{Alt UT} < 30',
+            'column_id': 'Alt UT',
+        },
+        'backgroundColor': 'tomato',
+        'color': 'black',
+    },
+    {
+        'if': {
+            'filter_query': '{Alt UT+3} < 30',
+            'column_id': 'Alt UT+3',
+        },
+        'backgroundColor': 'tomato',
+        'color': 'black',
+    },
+    {
+        'if': {
+            'filter_query': '{Alt UT+6} < 30',
+            'column_id': 'Alt UT+6',
+        },
+        'backgroundColor': 'tomato',
+        'color': 'black',
+    },
+    {
+        'if': {
+            'filter_query': '{Alt UT} > 30',
+            'column_id': 'Alt UT',
+        },
+        'backgroundColor': '#1aff66',
+        'color': 'black',
+    },
+    {
+        'if': {
+            'filter_query': '{Alt UT+3} > 30',
+            'column_id': 'Alt UT+3',
+        },
+        'backgroundColor': '#1aff66',
+        'color': 'black',
+    },
+    {
+        'if': {
+            'filter_query': '{Alt UT+6} > 30',
+            'column_id': 'Alt UT+6',
+        },
+        'backgroundColor': '#1aff66',
+        'color': 'black',
+    },
+]
 
-app.layout = html.Div([
-    html.Div([
-        html.Div([
-            html.Div([
-                html.Div([
-                    html.P('Longitude [E]'),
-                    dcc.Input(id="longitude", type="number", value=37.0, min=0, max=359),
-                ], className='row'),
-                html.Div([
-                    html.P('Latitiude [N]'),
-                    dcc.Input(id="latitude", type="number", value=37.0, min=-90, max=90),
-                ], className='row'),
-            ]),
-            html.Div([
-                dcc.DatePickerSingle(
-                    id='date-picker',
-                    min_date_allowed=dt(2020, 1, 1),
-                    max_date_allowed=dt(2044, 12, 31),
-                    initial_visible_month=dt.now(),
-                    date=str(dt.now()),
-                    display_format="D-M-Y",
-                    first_day_of_week=1,
-                ),
-            ], className='date'),
-            html.Div([
-                dcc.Input(id="ut", type="number", value=22, min=0, max=23),
-            ], className='hour'),
-        ], className='data'),
-    ], className='row'),
-    dash_table.DataTable(
-        id='table',
-        columns=columns,
-        # data=df.to_dict('records'),
-        sort_action="native",
-        filter_action="native",
-        sort_mode="multi",
-        style_cell={
-            'height': 'auto',
-            'minWidth': '90px', 'width': '90px', 'maxWidth': '90px',
-            'whiteSpace': 'normal'
-        }
-    ),
 
-    html.Div(id='intermediate-value', style={'display': 'none'}),
-], className="main")
+
+controls = dbc.Form(
+    [
+        dbc.FormGroup(
+            [
+               dbc.Label("Longitude [E]: "), 
+               dbc.Input(id="longitude", type="number", value=37.0, min=0, max=359),
+            ]
+        ),
+        dbc.FormGroup(
+            [
+                dbc.Label('Latitiude [N]: '),
+                dbc.Input(id="latitude", type="number", value=37.0, min=-90, max=90),
+
+            ]
+        ),
+        dbc.FormGroup(
+            [
+                dbc.Label('Date: '),
+                dbc.Input(id='date-picker', type='Date', value=dt.today().date())
+
+            ]
+        ),
+        dbc.FormGroup(
+            [
+                dbc.Label('UT Start: '),
+                dbc.Input(id="ut", type="number", value=22, min=0, max=23),
+
+            ]
+        ),
+    ],
+    # body=True,
+)
+
+
+app.layout = dbc.Container(
+    [
+        dbc.Row(
+            [
+                dbc.Col(controls, width={'size': 2, 'offset': 3}),
+                dbc.Col(dcc.Graph(id='graph'), width={'size': 4}),
+            ],
+            align='center',
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dash_table.DataTable(
+                    id='table',
+                    columns=columns,
+                    # data=df.to_dict('records'),
+                    sort_action="native",
+                    filter_action="native",
+                    sort_mode="multi",
+                    style_cell={
+                        'height': 'auto',
+                        'minWidth': '110px', 'width': '110px', 'maxWidth': '110px',
+                        'whiteSpace': 'normal'
+                        },
+                    style_data_conditional=style_data_conditional,
+                    ), width={'size': 8, 'offset': 2}
+                ), 
+            ],
+            align='center', 
+        ),
+        html.Div(id='intermediate-value', style={'display': 'none'}),
+    ],
+    fluid=True,
+)
+
 
 @app.callback(
-    Output('intermediate-value', 'children'),
+    [Output('intermediate-value', 'children'),
+     Output('intermediate-value', 'data-altaz')],
     [Input('longitude', 'value'),
      Input('latitude', 'value'),
-     Input('date-picker', 'date'),
+     Input('date-picker', 'value'),
      Input('ut', 'value')]
     )
 def clean_data(longitude, latitude, date, ut):
-    
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
     date = date.replace(hour=int(ut))
 
     observer = get_observer(longitude, latitude)
     
     full_df = df.copy()
-    for column_name, offset in zip(additional_columns, offsets):
+    altaz_df = df.copy()
+    for i, (column_name, offset) in enumerate(zip(additional_columns, offsets)):
         alt_tab = []
-        for i in range(len(df.index)):
-            alt_tab.append(get_alt(observer, date, offset, full_df.at[i, 'RA'], full_df.at[i, 'Dec']))
+        az_tab = []
+        for j in range(len(df.index)):
+            alt, az = get_alt(observer, date, offset, full_df.at[j, 'RA'], full_df.at[j, 'Dec'])
+            alt_tab.append(alt)
+            az_tab.append(az)
 
         full_df[column_name] = np.array(alt_tab)
+        altaz_df['Alt'+str(i)] = np.array(alt_tab)
+        altaz_df['Az'+str(i)] = np.array(az_tab)
 
-    return full_df.to_json(date_format='iso', orient='split')
+    full_df['RA'] = full_df['RA'].map("{:,.5f}".format)
+    full_df['Dec'] = full_df['Dec'].map("{:,.5f}".format)
+    return full_df.to_json(date_format='iso', orient='split'), altaz_df.to_json(orient='split')
+
+
+@app.callback(
+    Output('graph', 'figure'),
+    [Input('intermediate-value', 'data-altaz')],
+)
+def set_graph(data):
+    data = pd.read_json(data, orient='split')
+    fig = px.scatter_polar(data, r="Alt0", theta="Az0", range_r=[90, 0], hover_name='Name')
+
+    return fig
 
 @app.callback(
     Output('table', 'data'),
@@ -121,7 +221,7 @@ def get_alt(observer, date, offset, ra, dec):
     altaz_frame = observer.altaz(date)
     target_altaz = c.transform_to(altaz_frame)
 
-    return round(target_altaz.alt.value, 1)
+    return round(target_altaz.alt.value, 1), round(target_altaz.az.value, 1)
     
 
 if __name__ == '__main__':
