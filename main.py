@@ -165,8 +165,7 @@ app.layout = dbc.Container(
 
 
 @app.callback(
-    [Output('intermediate-value', 'children'),
-     Output('intermediate-value', 'data-altaz')],
+    Output('intermediate-value', 'children'),
     [Input('longitude', 'value'),
      Input('latitude', 'value'),
      Input('date-picker', 'value'),
@@ -179,7 +178,6 @@ def clean_data(longitude, latitude, date, ut):
     observer = get_observer(longitude, latitude)
     
     full_df = df.copy()
-    altaz_df = df.copy()
     for i, (column_name, offset) in enumerate(zip(additional_columns, offsets)):
         alt_tab = []
         az_tab = []
@@ -189,19 +187,18 @@ def clean_data(longitude, latitude, date, ut):
             az_tab.append(az)
 
         full_df[column_name] = np.array(alt_tab)
-        altaz_df['Alt'+str(i)] = np.array(alt_tab)
-        altaz_df['Az'+str(i)] = np.array(az_tab)
-
-    return full_df.to_json(date_format='iso', orient='split'), altaz_df.to_json(orient='split')
+        full_df['Az'+str(i)] = np.array(az_tab)
+        
+    return full_df.to_json(date_format='iso', orient='split')
 
 
 @app.callback(
     Output('graph', 'figure'),
-    [Input('intermediate-value', 'data-altaz')],
+    [Input('table', 'derived_virtual_data')],
 )
 def set_graph(data):
-    data = pd.read_json(data, orient='split')
-    fig = px.scatter_polar(data, r="Alt0", theta="Az0", range_r=[90, 0], hover_name='Name')
+    data = pd.DataFrame(data)
+    fig = px.scatter_polar(data, r="Alt UT", theta="Az0", range_r=[90, 0], hover_name='Name')
 
     return fig
 

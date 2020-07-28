@@ -1,4 +1,5 @@
 FROM python:3
-ADD . .
+ADD . /code
+WORKDIR /code
 RUN pip install -r requirements.txt
-CMD ["python3", "main.py"]
+# CMD ["python3", "main.py"]

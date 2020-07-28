@@ -1,0 +1,13 @@
+version: '3'
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile  
+    ports:
+     - "8050:8050"
+    volumes:
+      - .:/code
+    environment: 
+      - DASH_DEBUG="${DASH_DEBUG}"
+    command: ["python3", "-u", "main.py"]
