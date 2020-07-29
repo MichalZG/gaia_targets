@@ -19,8 +19,26 @@ from dash.exceptions import PreventUpdate
 import time
 from functools import wraps
 import os
+import requests
+import settings
 
-df = pd.read_csv('./gaia_targets_test.csv')
+
+COLUMNS_NAMES_MAPPER = {
+    'name': 'Name', 
+    'ra': 'RA', 
+    'dec': 'Dec',
+    'observations_number': 'Obs num',
+    'magnitude': 'Mag',
+    'Importance': 'Imp',
+    'days_from_last_observations': 'Last [d]',
+    'cadence': 'Cad [d]',
+    'priority': 'Priority'
+}
+
+# df = pd.read_csv('./gaia_targets_test.csv')
+df = pd.read_json(requests.get(settings.DB_ADDRESS).content)
+df = df.rename(columns=COLUMNS_NAMES_MAPPER)
+
 additional_columns = ['Alt UT', 'Alt UT+3', 'Alt UT+6']
 offsets = [0, 3, 6]
 
@@ -183,8 +201,8 @@ def timeit(func):
         try:
             return func(*args, **kwargs)
         finally:
-            end_ = time.time() - start
-            logfile.info(f"funtion <{func.__name__}> - total time: {end_ if end_ > 0 else 0} s")
+            end = time.time() - start
+            logfile.info(f"funtion <{func.__name__}> - total time: {end}s")
     return _time_it
 
 
@@ -224,6 +242,7 @@ def set_graph(data):
     fig = px.scatter_polar(data, r="Alt UT", theta="Az0", range_r=[90, 0], hover_name='Name')
 
     return fig
+
 
 @app.callback(
     Output('table', 'data'),
