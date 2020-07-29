@@ -17,6 +17,7 @@ import re
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
+
 # pd.options.display.float_format = '{:.2f}'.format
 
 df = pd.read_csv('./gaia_targets_test.csv')
@@ -182,6 +183,7 @@ app.layout = dbc.Container(
      Input('date-picker', 'value'),
      Input('ut', 'value')]
     )
+@timeit
 def clean_data(longitude, latitude, date, ut):
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
     date = date.replace(hour=int(ut))
@@ -207,6 +209,7 @@ def clean_data(longitude, latitude, date, ut):
     Output('graph', 'figure'),
     [Input('table', 'derived_virtual_data')],
 )
+@timeit
 def set_graph(data):
     if not data:
         raise PreventUpdate
@@ -219,6 +222,7 @@ def set_graph(data):
     Output('table', 'data'),
     [Input('intermediate-value', 'children')]
 )
+@timeit
 def set_table_data(data):
     data = pd.read_json(data, orient='split')
     return data.to_dict(orient='records')
@@ -235,6 +239,7 @@ def set_table_data(data):
      Input('date-picker', 'value'),
      Input('ut', 'value')]
     )
+@timeit
 def set_info(longitude, latitude, date, ut):
     observer = get_observer(longitude, latitude)
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
@@ -251,13 +256,14 @@ def set_info(longitude, latitude, date, ut):
 
     return sunset, sunrise, int(moon_phase.value / np.pi * 100), ", ".join([moon_alt, moon_az]), str(lst)
 
-
+@timeit
 def get_observer(longitude, latitude):
     location = EarthLocation.from_geodetic(longitude*u.deg, latitude*u.deg, 100*u.m)
     observer = Observer(location=location, name="Observer")
 
     return observer
 
+@timeit
 def get_alt(observer, date, offset, ra, dec):
     c = SkyCoord(ra, dec, unit="deg")
     date = Time(date) + offset*u.hour
@@ -268,4 +274,8 @@ def get_alt(observer, date, offset, ra, dec):
     
 
 if __name__ == '__main__':
+
+    import logging
+    logging.basicConfig(filename='debug.log',level=logging.DEBUG)
+
     app.run_server(host="0.0.0.0", port=8050, debug=False)
