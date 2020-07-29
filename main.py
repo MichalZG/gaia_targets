@@ -176,7 +176,6 @@ app.layout = dbc.Container(
 )
 
 
-
 def timeit(func):
     @wraps(func)
     def _time_it(*args, **kwargs):
