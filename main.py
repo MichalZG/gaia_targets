@@ -70,7 +70,7 @@ style_data_conditional = [
     },
     {
         'if': {
-            'filter_query': '{Alt UT} > 30',
+            'filter_query': '{Alt UT} >= 30',
             'column_id': 'Alt UT',
         },
         'backgroundColor': '#1aff66',
@@ -78,7 +78,7 @@ style_data_conditional = [
     },
     {
         'if': {
-            'filter_query': '{Alt UT+3} > 30',
+            'filter_query': '{Alt UT+3} >= 30',
             'column_id': 'Alt UT+3',
         },
         'backgroundColor': '#1aff66',
@@ -86,7 +86,7 @@ style_data_conditional = [
     },
     {
         'if': {
-            'filter_query': '{Alt UT+6} > 30',
+            'filter_query': '{Alt UT+6} >= 30',
             'column_id': 'Alt UT+6',
         },
         'backgroundColor': '#1aff66',
