@@ -16,9 +16,9 @@ import plotly.express as px
 import re
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
+import time
+from functools import wraps
 
-
-# pd.options.display.float_format = '{:.2f}'.format
 
 df = pd.read_csv('./gaia_targets_test.csv')
 additional_columns = ['Alt UT', 'Alt UT+3', 'Alt UT+6']
@@ -176,6 +176,19 @@ app.layout = dbc.Container(
 )
 
 
+
+def timeit(func):
+    @wraps(func)
+    def _time_it(*args, **kwargs):
+        start = time.time()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            end_ = time.time() - start
+            logfile.info(f"funtion <{func.__name__}> - total time: {end_ if end_ > 0 else 0} s")
+    return _time_it
+
+
 @app.callback(
     Output('intermediate-value', 'children'),
     [Input('longitude', 'value'),
@@ -187,21 +200,16 @@ app.layout = dbc.Container(
 def clean_data(longitude, latitude, date, ut):
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
     date = date.replace(hour=int(ut))
-
     observer = get_observer(longitude, latitude)
-    
+
     full_df = df.copy()
     for i, (column_name, offset) in enumerate(zip(additional_columns, offsets)):
-        alt_tab = []
-        az_tab = []
-        for j in range(len(df.index)):
-            alt, az = get_alt(observer, date, offset, full_df.at[j, 'RA'], full_df.at[j, 'Dec'])
-            alt_tab.append(alt)
-            az_tab.append(az)
 
-        full_df[column_name] = np.array(alt_tab)
-        full_df['Az'+str(i)] = np.array(az_tab)
-        
+        date_off = Time(date) + offset*u.hour
+        altaz_frame = observer.altaz(date_off)
+
+        full_df[column_name], full_df['Az'+str(i)] = get_altaz(df['RA'], df['Dec'], altaz_frame)
+
     return full_df.to_json(date_format='iso', orient='split')
 
 
@@ -236,14 +244,12 @@ def set_table_data(data):
      Output('LST', 'children')],
     [Input('longitude', 'value'),
      Input('latitude', 'value'),
-     Input('date-picker', 'value'),
-     Input('ut', 'value')]
+     Input('date-picker', 'value')]
     )
 @timeit
-def set_info(longitude, latitude, date, ut):
+def set_info(longitude, latitude, date):
     observer = get_observer(longitude, latitude)
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
-    date = date.replace(hour=int(ut))
     date = Time(date)
 
     sunset = observer.sun_set_time(date).strftime('%d-%m-%Y %H:%M:%S')
@@ -256,6 +262,7 @@ def set_info(longitude, latitude, date, ut):
 
     return sunset, sunrise, int(moon_phase.value / np.pi * 100), ", ".join([moon_alt, moon_az]), str(lst)
 
+
 @timeit
 def get_observer(longitude, latitude):
     location = EarthLocation.from_geodetic(longitude*u.deg, latitude*u.deg, 100*u.m)
@@ -264,18 +271,17 @@ def get_observer(longitude, latitude):
     return observer
 
 @timeit
-def get_alt(observer, date, offset, ra, dec):
+def get_altaz(ra, dec, altaz_frame):
     c = SkyCoord(ra, dec, unit="deg")
-    date = Time(date) + offset*u.hour
-    altaz_frame = observer.altaz(date)
     target_altaz = c.transform_to(altaz_frame)
 
-    return round(target_altaz.alt.value, 1), round(target_altaz.az.value, 1)
+    return np.round(target_altaz.alt.value, 1), np.round(target_altaz.az.value, 1)
     
 
 if __name__ == '__main__':
 
     import logging
     logging.basicConfig(filename='debug.log',level=logging.DEBUG)
+    logfile = logging.getLogger('file')
 
-    app.run_server(host="0.0.0.0", port=8050, debug=False)
+    app.run_server(host="0.0.0.0", port=8050, debug=True)
