@@ -18,7 +18,7 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import time
 from functools import wraps
-
+import os
 
 df = pd.read_csv('./gaia_targets_test.csv')
 additional_columns = ['Alt UT', 'Alt UT+3', 'Alt UT+6']
@@ -283,4 +283,5 @@ if __name__ == '__main__':
     logging.basicConfig(filename='debug.log',level=logging.DEBUG)
     logfile = logging.getLogger('file')
 
-    app.run_server(host="0.0.0.0", port=8050, debug=True)
+
+    app.run_server(host="0.0.0.0", port=8050, debug=os.environ.get('DASH_DEBUG', False))
