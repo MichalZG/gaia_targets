@@ -283,5 +283,8 @@ if __name__ == '__main__':
     logging.basicConfig(filename='debug.log',level=logging.DEBUG)
     logfile = logging.getLogger('file')
 
+    debug = False
+    if os.environ.get('DASH_DEBUG', "0") == "1":
+        debug = True
 
-    app.run_server(host="0.0.0.0", port=8050, debug=os.environ.get('DASH_DEBUG', False))
+    app.run_server(host="0.0.0.0", port=8050, debug=debug)
