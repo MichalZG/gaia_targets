@@ -168,6 +168,11 @@ app.layout = dbc.Container(
         ),
         dbc.Row(
             [
+
+            ]
+        ),
+        dbc.Row(
+            [
                 dbc.Col(
                     dash_table.DataTable(
                     id='table',
@@ -183,11 +188,13 @@ app.layout = dbc.Container(
                         },
                     style_data_conditional=style_data_conditional,
                     ), width={'size': 8, 'offset': 2}
-                ), 
+                ),
             ],
             align='center', 
         ),
+        html.Div(id='temp', style={'display': 'none'}, children=[]),
         html.Div(id='intermediate-value', style={'display': 'none'}),
+        html.Div(id='main-data', style={'display': 'none'}, children=[]),
     ],
     fluid=True,
 )
@@ -206,25 +213,43 @@ def timeit(func):
 
 
 @app.callback(
+    Output('main-data', 'children'),
+    [Input('temp', 'children')]
+)
+@timeit
+def refresh(_):
+    try:
+        df = pd.read_json(requests.get(settings.DB_ADDRESS).content)
+        df = df.rename(columns=COLUMNS_NAMES_MAPPER)
+    except:
+        return []
+    return df.to_json(orient='split')
+
+
+@app.callback(
     Output('intermediate-value', 'children'),
-    [Input('longitude', 'value'),
+    [Input('main-data', 'children'),
+     Input('longitude', 'value'),
      Input('latitude', 'value'),
      Input('date-picker', 'value'),
      Input('ut', 'value')]
     )
 @timeit
-def clean_data(longitude, latitude, date, ut):
+def clean_data(main_data, longitude, latitude, date, ut):
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
     date = date.replace(hour=int(ut))
     observer = get_observer(longitude, latitude)
 
-    full_df = df.copy()
+    if not main_data:
+        raise PreventUpdate
+    full_df = pd.read_json(main_data, orient='split')
+    # full_df = df.copy()
     for i, (column_name, offset) in enumerate(zip(additional_columns, offsets)):
 
         date_off = Time(date) + offset*u.hour
         altaz_frame = observer.altaz(date_off)
 
-        full_df[column_name], full_df['Az'+str(i)] = get_altaz(df['RA [h]'], df['Dec [deg]'], altaz_frame)
+        full_df[column_name], full_df['Az'+str(i)] = get_altaz(full_df['RA [h]'], full_df['Dec [deg]'], altaz_frame)
 
     return full_df.to_json(date_format='iso', orient='split')
 
@@ -249,6 +274,8 @@ def set_graph(data):
 )
 @timeit
 def set_table_data(data):
+    if not data:
+        raise PreventUpdate
     data = pd.read_json(data, orient='split')
     return data.to_dict(orient='records')
 
