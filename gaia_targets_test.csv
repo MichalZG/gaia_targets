@@ -1,4 +1,4 @@
-Name,RA,Dec,Obs num,Mag,Import,Last [d],Cad  [d],Priority
+Name, RA, Dec, Obs num, Mag,Import,Last [d],Cad  [d],Priority
 Gaia19dqe,99.85635,-0.36987,12103,13,4,99.7,3,132.9
 Gaia19ceq,141.53714,24.0607,73,18.45,3,47.5,5,28.5
 Gaia20agb,108.17188,-26.50766,794,13.87,5,32.5,7,23.2

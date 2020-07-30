@@ -25,11 +25,11 @@ import settings
 
 COLUMNS_NAMES_MAPPER = {
     'name': 'Name', 
-    'ra': 'RA', 
-    'dec': 'Dec',
+    'ra': 'RA [h]', 
+    'dec': 'Dec [deg]',
     'observations_number': 'Obs num',
     'magnitude': 'Mag',
-    'Importance': 'Imp',
+    'importance': 'Imp',
     'days_from_last_observations': 'Last [d]',
     'cadence': 'Cad [d]',
     'priority': 'Priority'
@@ -46,7 +46,6 @@ columns = list(df.columns)
 columns.extend(additional_columns)
 
 columns = [{"name": i, "id": i} for i in columns]
-
 
 
 for c in columns:
@@ -225,7 +224,7 @@ def clean_data(longitude, latitude, date, ut):
         date_off = Time(date) + offset*u.hour
         altaz_frame = observer.altaz(date_off)
 
-        full_df[column_name], full_df['Az'+str(i)] = get_altaz(df['RA'], df['Dec'], altaz_frame)
+        full_df[column_name], full_df['Az'+str(i)] = get_altaz(df['RA [h]'], df['Dec [deg]'], altaz_frame)
 
     return full_df.to_json(date_format='iso', orient='split')
 
@@ -290,7 +289,7 @@ def get_observer(longitude, latitude):
 
 @timeit
 def get_altaz(ra, dec, altaz_frame):
-    c = SkyCoord(ra, dec, unit="deg")
+    c = SkyCoord(ra * u.hour, dec * u.deg)
     target_altaz = c.transform_to(altaz_frame)
 
     return np.round(target_altaz.alt.value, 1), np.round(target_altaz.az.value, 1)
