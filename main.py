@@ -52,7 +52,7 @@ for c in columns:
     if 'Alt UT' in c['name']:
         c['format'] = {'specifier': '.1f'} 
         c['type'] = 'numeric'
-    elif c['name'] in ['RA', 'Dec']:
+    elif c['name'] in ['RA [h]', 'Dec [deg]']:
         c['format'] = {'specifier': '.5f'} 
         c['type'] = 'numeric'
 
