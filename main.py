@@ -212,12 +212,17 @@ def timeit(func):
     return _time_it
 
 
+
+"""
+Functions fired ones on page start/refresh
+"""
+
 @app.callback(
     Output('main-data', 'children'),
     [Input('temp', 'children')]
 )
 @timeit
-def refresh(_):
+def refresh_data(_):
     try:
         df = pd.read_json(requests.get(settings.DB_ADDRESS).content)
         df = df.rename(columns=COLUMNS_NAMES_MAPPER)
@@ -225,6 +230,17 @@ def refresh(_):
         return []
     return df.to_json(orient='split')
 
+@app.callback(
+    Output('date-picker', 'value'),
+    [Input('temp', 'children')]
+)
+@timeit
+def refresh_date(_):
+    return dt.today().date()
+
+"""
+Callbacks functions
+"""
 
 @app.callback(
     Output('intermediate-value', 'children'),
@@ -294,7 +310,7 @@ def set_table_data(data):
 def set_info(longitude, latitude, date):
     observer = get_observer(longitude, latitude)
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
-    date = Time(date)
+    date = Time(date) + 1*u.day # for skip to next day
 
     sunset = observer.sun_set_time(date).strftime('%d-%m-%Y %H:%M:%S')
     sunrise = observer.sun_rise_time(date).strftime('%d-%m-%Y %H:%M:%S')
