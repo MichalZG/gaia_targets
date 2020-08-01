@@ -320,7 +320,7 @@ def set_info(longitude, latitude, date):
     moon_az = str(round(moon_altaz.az.deg, 0))
     lst = observer.local_sidereal_time(date)
 
-    return sunset, sunrise, int(moon_phase.value / np.pi * 100), ", ".join([moon_alt, moon_az]), str(lst)
+    return sunset, sunrise, 100 - int(moon_phase.value / np.pi * 100), ", ".join([moon_alt, moon_az]), str(lst)
 
 
 @timeit
