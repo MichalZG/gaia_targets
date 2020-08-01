@@ -265,7 +265,8 @@ def clean_data(main_data, longitude, latitude, date, ut):
         date_off = Time(date) + offset*u.hour
         altaz_frame = observer.altaz(date_off)
 
-        full_df[column_name], full_df['Az'+str(i)] = get_altaz(full_df['RA [h]'], full_df['Dec [deg]'], altaz_frame)
+        full_df[column_name], full_df['Az'+str(i)] = get_altaz(
+                full_df['RA [h]'], full_df['Dec [deg]'], altaz_frame)
 
     return full_df.to_json(date_format='iso', orient='split')
 
@@ -304,18 +305,20 @@ def set_table_data(data):
      Output('LST', 'children')],
     [Input('longitude', 'value'),
      Input('latitude', 'value'),
-     Input('date-picker', 'value')]
+     Input('date-picker', 'value'),
+     Input('ut', 'value'),
+     ]
     )
 @timeit
-def set_info(longitude, latitude, date):
+def set_info(longitude, latitude, date, ut):
     observer = get_observer(longitude, latitude)
     date = dt.strptime(re.split('T| ', date)[0], '%Y-%m-%d')
-    date = Time(date) + 1*u.day # for skip to next day
+    date = Time(date.replace(hour=int(ut)))
 
     sunset = observer.sun_set_time(date).strftime('%d-%m-%Y %H:%M:%S')
     sunrise = observer.sun_rise_time(date).strftime('%d-%m-%Y %H:%M:%S')
-    moon_phase = observer.moon_phase(date)
-    moon_altaz = observer.moon_altaz(date)
+    moon_phase = observer.moon_phase(date + 1*u.day)
+    moon_altaz = observer.moon_altaz(date + 1*u.day)
     moon_alt = str(round(moon_altaz.alt.deg, 0))
     moon_az = str(round(moon_altaz.az.deg, 0))
     lst = observer.local_sidereal_time(date)
